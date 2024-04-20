@@ -1,8 +1,8 @@
 package org.springframework.ai.gateway.server.functions;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -38,7 +38,7 @@ public class PconlineRegionFunction implements Function<PconlineRegionFunction.R
         headers.add("Connection","close");
     };
 
-    private final LoadingCache<String, Optional<JSONObject>> WEATHER_DATA_CACHES = Caffeine.newBuilder()
+    private final LoadingCache<String, Optional<String>> WEATHER_DATA_CACHES = Caffeine.newBuilder()
             // 设置写缓存后1个小时过期
             .expireAfterWrite(1, TimeUnit.HOURS)
             // 设置缓存容器的初始容量为10
@@ -48,7 +48,7 @@ public class PconlineRegionFunction implements Function<PconlineRegionFunction.R
             // 设置要统计缓存的命中率
             .recordStats()
             // 设置缓存的移除通知
-            .removalListener((RemovalListener<String, Optional<JSONObject>>) (key, value, cause) -> log.info("{} was removed, cause is {}", key, cause))
+            .removalListener((RemovalListener<String, Optional<String>>) (key, value, cause) -> log.info("{} was removed, cause is {}", key, cause))
             // build方法中可以指定CacheLoader，在缓存不存在时通过CacheLoader的实现自动加载缓存
             /**
              * IP地址解析：http://whois.pconline.com.cn/ipJson.jsp?json=true&ip=183.128.136.82
@@ -67,10 +67,8 @@ public class PconlineRegionFunction implements Function<PconlineRegionFunction.R
                             .retrieve().toEntity(String.class);
                     String bodyString = response.getBody();
                     log.info(" IP : {} >> Location : {} ", ip, bodyString);
-                    JSONObject jsonObject = JSONObject.parseObject(bodyString);
-                    String addr = jsonObject.getString("addr");
-                    if (StringUtils.hasText(addr)) {
-                        return Optional.ofNullable(jsonObject);
+                    if (StringUtils.hasText(bodyString)) {
+                        return Optional.ofNullable(bodyString);
                     }
                     log.error("IP : {} >> Location Query Error. Body >> {}", bodyString);
                 } catch (Exception e) {
@@ -97,23 +95,14 @@ public class PconlineRegionFunction implements Function<PconlineRegionFunction.R
 
     }
 
+    ObjectMapper mapper;
+
     @Override
     public Response apply(Request request) {
-        Optional<JSONObject> opt = WEATHER_DATA_CACHES.get(request.ip());
+        Optional<String> opt = WEATHER_DATA_CACHES.get(request.ip());
         if (opt.isPresent()) {
-            JSONObject jsonObject = opt.get();
-            return new Response(
-                    jsonObject.getString("ip"),
-                    jsonObject.getString("pro"),
-                    jsonObject.getString("proCode"),
-                    jsonObject.getString("city"),
-                    jsonObject.getString("cityCode"),
-                    jsonObject.getString("region"),
-                    jsonObject.getString("regionCode"),
-                    jsonObject.getString("addr"),
-                    jsonObject.getString("regionNames"),
-                    jsonObject.getString("err")
-            );
+            String jsonObject = opt.get();
+            return mapper.convertValue(jsonObject, Response.class);
         }
         return new Response(request.ip(), "", "", "", "", "", "", "", "", "");
     }

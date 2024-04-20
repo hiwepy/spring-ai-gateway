@@ -1,6 +1,5 @@
 package org.springframework.ai.gateway.server.functions;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,7 +27,7 @@ public class GetWeatherFunction implements Function<GetWeatherFunction.Request, 
     private final static RestClient restClient = RestClient.builder().baseUrl(SOJSON_WEATHER_URL)
             .defaultStatusHandler(RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER).build();
 
-    private final LoadingCache<String, Optional<JSONObject>> WEATHER_DATA_CACHES = Caffeine.newBuilder()
+    private final LoadingCache<String, Optional<String>> WEATHER_DATA_CACHES = Caffeine.newBuilder()
             // 设置写缓存后1个小时过期
             .expireAfterWrite(1, TimeUnit.HOURS)
             // 设置缓存容器的初始容量为10
@@ -38,15 +37,14 @@ public class GetWeatherFunction implements Function<GetWeatherFunction.Request, 
             // 设置要统计缓存的命中率
             .recordStats()
             // 设置缓存的移除通知
-            .removalListener((RemovalListener<String, Optional<JSONObject>>) (key, value, cause) -> log.info("{} was removed, cause is {}", key, cause))
+            .removalListener((RemovalListener<String, Optional<String>>) (key, value, cause) -> log.info("{} was removed, cause is {}", key, cause))
             // build方法中可以指定CacheLoader，在缓存不存在时通过CacheLoader的实现自动加载缓存
             .build(city_code -> {
                 HttpEntity<String> response = restClient.get().uri(String.format("/api/weather/city/%s", city_code))
                         .retrieve().toEntity(String.class);
                 String bodyString = response.getBody();
                 log.info("city_code {} >> weather :  {}", city_code, bodyString);
-                JSONObject jsonObject = JSONObject.parseObject(bodyString);
-                return Optional.ofNullable(jsonObject);
+                return Optional.ofNullable(bodyString);
             });
 
 
@@ -71,12 +69,12 @@ public class GetWeatherFunction implements Function<GetWeatherFunction.Request, 
 
     @Override
     public Response apply(Request request) {
-        Optional<JSONObject> opt = WEATHER_DATA_CACHES.get(request.cityId());
+        Optional<String> opt = WEATHER_DATA_CACHES.get(request.cityId());
         if (opt.isPresent()) {
-            JSONObject jsonObject = opt.get();
-            JSONObject data = jsonObject.getJSONObject("data");
+            String jsonObject = opt.get();
+            /*JSONObject data = jsonObject.getJSONObject("data");
             return new Response(data.getDouble("wendu"), data.getDouble("pm25"), data.getDouble("pm10"),
-                    data.getString("quality"), data.getDouble("wendu"), Unit.C);
+                    data.getString("quality"), data.getDouble("wendu"), Unit.C);*/
         }
         return new Response(30.0, Unit.C);
     }
