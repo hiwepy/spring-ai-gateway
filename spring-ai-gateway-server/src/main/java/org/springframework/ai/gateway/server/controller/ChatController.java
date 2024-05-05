@@ -1,12 +1,15 @@
 package org.springframework.ai.gateway.server.controller;
 
+import org.springframework.ai.chat.ChatClient;
 import org.springframework.ai.chat.ChatResponse;
 import org.springframework.ai.chat.Generation;
+import org.springframework.ai.chat.StreamingChatClient;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.gateway.server.client.NestedChatClient;
 import org.springframework.ai.gateway.server.client.NestedStreamingChatClient;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,9 +27,10 @@ public class ChatController {
     private final NestedStreamingChatClient streamingChatClient;
 
     @Autowired
-    public ChatController(NestedChatClient chatClient, NestedStreamingChatClient streamingChatClient) {
-        this.chatClient = chatClient;
-        this.streamingChatClient = streamingChatClient;
+    public ChatController(ObjectProvider<ChatClient> chatClientProvider,
+                          ObjectProvider<StreamingChatClient> streamingChatClientProvider) {
+        this.chatClient = new NestedChatClient(chatClientProvider.orderedStream().toList());
+        this.streamingChatClient = new NestedStreamingChatClient(streamingChatClientProvider.orderedStream().toList());
     }
 
     @GetMapping("/v1/generate")
