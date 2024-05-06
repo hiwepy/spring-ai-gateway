@@ -9,6 +9,7 @@ import org.springframework.ai.image.ImageResponse;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,7 +26,7 @@ public class ImageController {
         this.nestedImageClient = new NestedImageClient(imageClientProvider.orderedStream().toList());
     }
 
-    @GetMapping("/v1/images/generations")
+    @PostMapping("/v1/images/generations")
     public ImageResponse generations(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message) {
         ImagePrompt request = new ImagePrompt(message);
         List<ImageMessage> messages = List.of(new ImageMessage(message));
