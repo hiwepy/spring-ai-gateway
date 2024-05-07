@@ -13,6 +13,25 @@ import java.util.Map;
 public class ApiRecord {
 
     // --------------------------------------------------------------------------
+    // Audio
+    // --------------------------------------------------------------------------
+
+    /**
+     * Generates audio from the input text.
+     * @param model One of the available TTS models: tts-1 or tts-1-hd
+     * @param purpose
+     * @param purpose
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record AudioCreateRequest(
+            @JsonProperty("purpose") String model,
+            @JsonProperty("purpose") String purpose,
+            @JsonProperty("purpose") String purpose) {
+
+    }
+
+
+    // --------------------------------------------------------------------------
     // Chat & Streaming Chat
     // --------------------------------------------------------------------------
 
