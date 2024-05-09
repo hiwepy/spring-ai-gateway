@@ -19,17 +19,96 @@ public class ApiRecord {
     /**
      * Generates audio from the input text.
      * @param model One of the available TTS models: tts-1 or tts-1-hd
-     * @param purpose
-     * @param purpose
+     * @param input The text to generate audio for. The maximum length is 4096 characters.
+     * @param voice The voice to use when generating the audio. Supported voices are alloy, echo, fable, onyx, nova, and shimmer. Previews of the voices are available in the Text to speech guide.
+     * @param responseFormat The format to audio in. Supported formats are mp3, opus, aac, flac, wav, and pcm.
+     * @param speed The speed of the generated audio. Select a value from 0.25 to 4.0. 1.0 is the default.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record AudioCreateRequest(
             @JsonProperty("purpose") String model,
-            @JsonProperty("purpose") String purpose,
-            @JsonProperty("purpose") String purpose) {
+            @JsonProperty("purpose") String input,
+            @JsonProperty("purpose") String voice,
+            @JsonProperty("response_format") String responseFormat,
+            @JsonProperty("speed") Float speed) {
+
+        public AudioCreateRequest(String model, String input, String voice) {
+            this(model, input, voice, null, null);
+        }
 
     }
 
+    /**
+     * Transcribes audio into the input language.
+     * @param file The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+     * @param model ID of the model to use. Only whisper-1 (which is powered by our open source Whisper V2 model) is currently available.
+     * @param language The language of the input audio. Supplying the input language in ISO-639-1 format will improve accuracy and latency.
+     * @param prompt An optional text to guide the model's style or continue a previous audio segment. The prompt should match the audio language.
+     * @param responseFormat The format of the transcript output, in one of these options: json, text, srt, verbose_json, or vtt.
+     * @param temperature The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. If set to 0, the model will use log probability to automatically increase the temperature until certain thresholds are hit.
+     * @param temperatureGranularities The timestamp granularities to populate for this transcription. response_format must be set verbose_json to use timestamp granularities. Either or both of these options are supported: word, or segment. Note: There is no additional latency for segment timestamps, but generating word timestamps incurs additional latency.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record AudioTranscriptionRequest(
+            @JsonProperty("file") File file,
+            @JsonProperty("model") String model,
+            @JsonProperty("language") String language,
+            @JsonProperty("prompt") String prompt,
+            @JsonProperty("response_format") String responseFormat,
+            @JsonProperty("temperature") Float temperature,
+            @JsonProperty("timestamp_granularities") String[] temperatureGranularities) {
+
+        public AudioTranscriptionRequest(File file, String model) {
+            this(file, model, null, null, null, null, null);
+        }
+
+        public AudioTranscriptionRequest(File file, String model, String language) {
+            this(file, model, language, null, null, null, null);
+        }
+
+        public AudioTranscriptionRequest(File file, String model, String language, String prompt) {
+            this(file, model, language, prompt, null, null, null);
+        }
+
+        public AudioTranscriptionRequest(File file, String model, String language, String prompt, String responseFormat) {
+            this(file, model, language, prompt, responseFormat, null, null);
+        }
+
+        public AudioTranscriptionRequest(File file, String model, String language, String prompt, String responseFormat, Float temperature) {
+            this(file, model, language, prompt, responseFormat, temperature, null);
+        }
+
+    }
+
+    /**
+     * Translates audio into English.
+     * @param file The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+     * @param model ID of the model to use. Only whisper-1 (which is powered by our open source Whisper V2 model) is currently available.
+     * @param prompt An optional text to guide the model's style or continue a previous audio segment. The prompt should be in English.
+     * @param responseFormat The format of the transcript output, in one of these options: json, text, srt, verbose_json, or vtt.
+     * @param temperature The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. If set to 0, the model will use log probability to automatically increase the temperature until certain thresholds are hit.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record AudioTranslationRequest(
+            @JsonProperty("file") File file,
+            @JsonProperty("model") String model,
+            @JsonProperty("prompt") String prompt,
+            @JsonProperty("response_format") String responseFormat,
+            @JsonProperty("temperature") Float temperature) {
+
+        public AudioTranslationRequest(File file, String model) {
+            this(file, model, null, null, null);
+        }
+
+        public AudioTranslationRequest(File file, String model, String prompt) {
+            this(file, model, prompt, null, null);
+        }
+
+        public AudioTranslationRequest(File file, String model, String prompt, String responseFormat) {
+            this(file, model, prompt, responseFormat,null);
+        }
+
+    }
 
     // --------------------------------------------------------------------------
     // Chat & Streaming Chat
