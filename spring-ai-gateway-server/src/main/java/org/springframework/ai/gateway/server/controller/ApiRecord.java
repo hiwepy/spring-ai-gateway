@@ -14,6 +14,7 @@ public class ApiRecord {
 
     // --------------------------------------------------------------------------
     // Audio
+    // https://platform.openai.com/docs/api-reference/audio
     // --------------------------------------------------------------------------
 
     /**
@@ -81,6 +82,64 @@ public class ApiRecord {
     }
 
     /**
+     * Represents a verbose json transcription response returned by model, based on the provided input.
+     * @param language The language of the input audio.
+     * @param duration The duration of the input audio.
+     * @param text The transcribed text.
+     * @param words Extracted words and their corresponding timestamps.
+     * @param segments Segments of the transcribed text and their corresponding details.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record AudioTranscriptionResponse(
+            @JsonProperty("language") String language,
+            @JsonProperty("duration") String duration,
+            @JsonProperty("text") String text,
+            @JsonProperty("words") List<AudioTranscriptionWord> words,
+            @JsonProperty("segments") List<AudioTranscriptioSegment> segments) {
+
+    }
+
+    /**
+     * Extracted words and their corresponding timestamps.
+     * @param start Start time of the word in seconds.
+     * @param end End time of the word in seconds.
+     * @param word The text content of the word.
+     */
+    public record AudioTranscriptionWord (
+            @JsonProperty("start") Float start,
+            @JsonProperty("end") Float end,
+            @JsonProperty("word") String word) {
+
+    }
+
+    /**
+     * Segments of the transcribed text and their corresponding details.
+     * @param id Unique identifier of the segment.
+     * @param seek Seek offset of the segment.
+     * @param start Start time of the segment in seconds.
+     * @param end End time of the segment in seconds.
+     * @param text Text content of the segment.
+     * @param tokens Array of token IDs for the text content.
+     * @param temperature Temperature parameter used for generating the segment.
+     * @param avgLogprob Average logprob of the segment. If the value is lower than -1, consider the logprobs failed.
+     * @param compressionRatio Compression ratio of the segment. If the value is greater than 2.4, consider the compression failed.
+     * @param noSpeechProb Probability of no speech in the segment. If the value is higher than 1.0 and the avg_logprob is below -1, consider this segment silent.
+     */
+    public record AudioTranscriptioSegment (
+            @JsonProperty("id") Integer id,
+            @JsonProperty("seek") Integer seek,
+            @JsonProperty("start") Float start,
+            @JsonProperty("end") Float end,
+            @JsonProperty("text") String text,
+            @JsonProperty("tokens") List<String> tokens,
+            @JsonProperty("temperature") Float temperature,
+            @JsonProperty("avg_logprob") Float avgLogprob,
+            @JsonProperty("compression_ratio") Float compressionRatio,
+            @JsonProperty("no_speech_prob") Float noSpeechProb) {
+
+    }
+
+    /**
      * Translates audio into English.
      * @param file The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
      * @param model ID of the model to use. Only whisper-1 (which is powered by our open source Whisper V2 model) is currently available.
@@ -107,6 +166,16 @@ public class ApiRecord {
         public AudioTranslationRequest(File file, String model, String prompt, String responseFormat) {
             this(file, model, prompt, responseFormat,null);
         }
+
+    }
+
+    /**
+     * Represents a transcription response returned by model, based on the provided input.
+     * @param text The transcribed text.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record AudioTranslationResponse(
+        @JsonProperty("text") String text) {
 
     }
 
@@ -177,8 +246,7 @@ public class ApiRecord {
      * Chat completion request object.
      * @param model 所要调用的模型编码
      * @param messages 调用语言模型时，将当前对话信息列表作为提示输入给模型， 按照 {"role": "user", "content": "你好"} 的json 数组形式进行传参； 可能的消息类型包括 System message、User message、Assistant message 和 Tool message。
-     * @param requestId 由用户端传参，需保证唯一性；用于区分每次请求的唯一标识，用户端不传时平台会默认生成。
-     * @param doSample do_sample 为 true 时启用采样策略，do_sample 为 false 时采样策略 temperature、top_p 将不生效。默认值为 true。
+     * @param frequencyPenalty Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
      * @param stream 使用同步调用时，此参数应当设置为 fasle 或者省略。表示模型生成完所有内容后一次性返回所有内容。默认值为 false。
      * 如果设置为 true，模型将通过标准 Event Stream ，逐块返回模型生成内容。Event Stream 结束时会返回一条data: [DONE]消息。
      * @param temperature 采样温度，控制输出的随机性，必须为正数     *
@@ -190,6 +258,7 @@ public class ApiRecord {
      * 例如：0.1 意味着模型解码器只考虑从前 10% 的概率的候选集中取tokens
      * 建议您根据应用场景调整 top_p 或 temperature 参数，但不要同时调整两个参数
      * @param maxTokens 模型输出最大 tokens，最大输出为8192，默认值为1024
+     * @param n 生成的消息数量，默认值为1
      * @param stop
      * @param tools
      * @param toolChoice
@@ -197,18 +266,18 @@ public class ApiRecord {
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ChatCompletionRequest(
-            @JsonProperty("request_id") String requestId,
             @JsonProperty("model") String model,
             @JsonProperty("messages") List<ChatCompletionMessage> messages,
-            @JsonProperty("do_sample") Boolean doSample,
+            @JsonProperty("frequency_penalty") Integer frequencyPenalty,
             @JsonProperty("stream") Boolean stream,
             @JsonProperty("temperature") Float temperature,
             @JsonProperty("top_p") Float topP,
             @JsonProperty("max_tokens") Integer maxTokens,
+            @JsonProperty("n") Integer n,
             @JsonProperty("stop") List<String> stop,
             @JsonProperty("tools") List<FunctionTool> tools,
             @JsonProperty("tool_choice") String toolChoice,
-            @JsonProperty("user_id") String user) {
+            @JsonProperty("user") String user) {
 
         /**
          * Shortcut constructor for a chat completion request with the given messages and model.
@@ -241,18 +310,16 @@ public class ApiRecord {
          * Shortcut constructor for a chat completion request with the given messages, model, tools and tool choice.
          * Streaming is set to false, temperature to 0.8 and all other parameters are null.
          *
-         * @param requestId   A unique identifier for the request.
          * @param model      ID of the model to use.
          * @param messages   A list of messages comprising the conversation so far.
          * @param tools      A list of tools the model may call. Currently, only functions are supported as a tool.
          * @param toolChoice Controls which (if any) function is called by the model.
          */
-        public ChatCompletionRequest(String requestId,
-                                     String model,
+        public ChatCompletionRequest(String model,
                                      List<ChatCompletionMessage> messages,
                                      List<FunctionTool> tools,
                                      String toolChoice) {
-            this(requestId, model, messages, null, false, 0.95f, null, null, null, tools, toolChoice, null);
+            this(model, messages, null, false, 0.95f, null, null, null, tools, toolChoice, null);
         }
 
         /**
@@ -509,6 +576,11 @@ public class ApiRecord {
 
     }
 
+    // --------------------------------------------------------------------------
+    // Embeddings
+    // --------------------------------------------------------------------------
+
+
     /**
      * List of well-known 智普AI embedding models.
      * https://open.bigmodel.cn/dev/api#text_embedding
@@ -528,10 +600,6 @@ public class ApiRecord {
         }
 
     }
-
-    // --------------------------------------------------------------------------
-    // Embeddings
-    // --------------------------------------------------------------------------
 
     /**
      * Usage statistics.
@@ -622,7 +690,7 @@ public class ApiRecord {
 
     /**
      * The response object returned from the /embedding endpoint.
-     * @param model 模型名称
+     * @param model ID of the model to use.
      * @param data 模型生成的数组结果
      * @param usage 本次模型调用的 tokens 数量统计
      * @param object 结果类型，目前为 "list"
